@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+
+<!-- I have used the google maps api to show nearby places it is used at #264 and in  fecth1() and fetch2() function at #141 , #170 -->
+
+<!-- Browser Api used are get geo location at #88 and keypress detection at 216 -->
+
+<head>
+
+    <link rel="stylesheet" href="https://tailwindcss.com/css/main.css?id=ff4f1661795423b0d7cc">
+    <style>
+
+        html , body {
+    height: 100%;
+}
+
+        #map {
+            height: 100%;
+            width: 100%;
+            position: relative;
+        }
+
+        #titleText{
+
+            width: 100%;
+            position: absolute;
+            margin-top: 20px;
+            margin-right: 20px;
+            top: 0;
+            left: 0;
+            
+            z-index: 1;
+            text-align: right;
+        }
+
+        #searchOptions{
+            
+            border-radius: 10px;
+            background: white;
+            padding: 20px;
+            margin-top: 50px;
+            margin-left: 20px;
+            position: fixed;
+            overflow-y: auto;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 2;
+        }
+
+      
+    
+
+    </style>
+</head>
+
+<body>
+    
+    <div id="map"></div>
+    <h3 id="titleText">My Google Maps</h3>
+
+    <div id="searchOptions">
+
+
+        <input class="appearance-none block w-full bg-grey-lighter text-grey-darker border border-grey-lighter rounded py-3 px-4"
+            id="search-input" type="text" placeholder="Search ex: restaurant">
+
+            
+            <div style="margin-top:20px">
+
+                <button id="searchNearBy" class="bg-blue hover:bg-blue-dark text-white font-bold py-2 px-4 rounded-full">
+                     Search Nearby
+                </button>
+        
+        </div>
+
+        <div id="searchResults" style="margin-top:10px"></div>
+    
+    </div>
+    <script>
+
+        // initialize map after get map script fetch data
+        function initMap() {
+            
+            // google developer api key
+            const API_KEY = 'AIzaSyAsbqsMeJpkKpK7MCxnOZz70yhzjo9ylLY';
+            let current_location ;
+
+            // get current location
+
+            navigator.geolocation.watchPosition(
+
+                data => {
+                    console.log(data);
+
+                    current_location = { lat: data.coords.latitude, lng: data.coords.longitude };
+                
+                    show_map();
+                },
+                err => {
+                    console.error(err);
+                }
+            );
+
+
+          // load the map showing marker at our current location
+
+            function show_map()
+            {
+            let map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 4,
+                center: current_location
+            });
+            let marker = new google.maps.Marker({
+                position: current_location,
+                map: map
+            });
+        }
+
+           let button = document.getElementById('searchNearBy');
+
+           let changeLocationButton = document.getElementById('changeLocation');
+
+            let input = document.getElementById('search-input');
+
+            let list = document.getElementById('searchResults');
+
+            let places ;
+
+            let place_to_find
+
+            button.addEventListener("click", function () {
+
+
+                place_to_find = input.value;
+                console.log(input.value);
+
+               // calling fetch function
+                fetch2();
+
+            });
+
+          // fetch 1 function to get nearby places  using fetch() then() catch ()
+            function fetch1()
+            {
+                fetch(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${current_location.lat},${current_location.lng}&radius=500&type=${place_to_find}&key=${API_KEY}`)
+                    .then(
+                    function (response) {
+                        if (response.status !== 200) {
+                            console.log('Looks like there was a problem. Status Code: ' +
+                                response.status);
+                            return;
+                        }
+
+                        // Examine the text in the response
+                        response.json().then(function (data) {
+
+                            places = data.results;
+
+                            // call show places to display places data
+
+                            show_places();
+                        });
+                    }
+                    )
+                    .catch(function (err) {
+                        console.log('Fetch Error :-S', err);
+                    });
+            }
+
+
+           // fetch 2 function to get nearby places using async , await  ,fetch
+           async function fetch2() {
+                let response = await fetch(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${current_location.lat},${current_location.lng}&radius=500&type=${place_to_find}&key=${API_KEY}`);
+                let data = await response.json();
+                places = data.results;
+
+               
+
+             // call show places to display places data
+               show_places();
+            }
+
+            function show_places()
+            {
+                list.innerHTML = places.map(place => {
+
+                    const name = place.name;
+
+                    const icon = place.icon;
+
+                    //const open_status = place.opening_hours.open_now;
+
+                    return `<article>
+                    <div class="bg-white mx-auto max-w-sm shadow-lg rounded-lg overflow-hidden">
+                        <div class="sm:flex sm:items-center px-6 py-4">
+                            <img class="block h-16 sm:h-24 rounded-full mx-auto mb-4 sm:mb-0 sm:mr-4 sm:ml-0" src="${icon}" alt="">
+                            <div class="text-center sm:text-left sm:flex-grow">
+                                <div class="mb-4">
+                                    <p class="text-xl leading-tight">${name}</p>
+                                    <p class="text-sm leading-tight text-grey-dark">ID#: ${name}</p>
+                                </div>
+                                <div>
+                                    <a class="text-xs font-semibold rounded-full px-4 py-1 leading-normal bg-white border border-purple text-purple hover:bg-purple hover:text-white">${place.rating}</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>`;
+                });
+            }
+
+
+
+          document.onkeydown = checkKey;
+
+          let zoom_in = false;
+
+            function checkKey(e) {
+
+                e = e || window.event;
+
+                if (e.keyCode == '32') {
+
+                    if(zoom_in)
+                    {
+                        let map = new google.maps.Map(document.getElementById('map'), {
+                            zoom: 4,
+                            center: current_location
+                        });
+                        let marker = new google.maps.Marker({
+                            position: current_location,
+                            map: map
+                        });
+
+                        zoom_in = false;
+                    
+                    }
+                    else {
+
+                      let map = new google.maps.Map(document.getElementById('map'), {
+                            zoom: 8,
+                            center: current_location
+                        });
+                        let marker = new google.maps.Marker({
+                            position: current_location,
+                            map: map
+                        });
+
+                        zoom_in = true;
+                    }
+                }
+                
+                
+
+            }
+         
+        
+
+            
+        }
+
+        
+
+
+    </script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsbqsMeJpkKpK7MCxnOZz70yhzjo9ylLY&callback=initMap">
+    </script>
+
+    <script>
+    </script>
+</body>
+
+</html>
